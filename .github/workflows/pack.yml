@@ -17,10 +17,10 @@ jobs:
     container: archlinux:base-devel
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: node_modules
@@ -28,10 +28,10 @@ jobs:
       - name: Prepare
         run: |
           pacman -Sy
-          pacman -S --noconfirm base gnome-shell gtk3 libadwaita gtk4 glib2 gobject-introspection
+          pacman -S --noconfirm base util-linux util-linux-libs gnome-shell gtk3 libadwaita gtk4 glib2 gobject-introspection
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -41,7 +41,7 @@ jobs:
           npm run github_action
         
       - name: Upload Extension Pack
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v4
         with:
           name: rounded-window-corners@yilozt.shell-extension
           path: _build/
