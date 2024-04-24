@@ -31,7 +31,7 @@ jobs:
           pacman -S --noconfirm base util-linux util-linux-libs gnome-shell gtk3 libadwaita gtk4 glib2 gobject-introspection
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -41,7 +41,7 @@ jobs:
           npm run github_action
         
       - name: Upload Extension Pack
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v4
         with:
           name: rounded-window-corners@yilozt.shell-extension
           path: _build/
