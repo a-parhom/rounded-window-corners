@@ -1,63 +1,63 @@
 // imports.gi
-import * as Clutter from 'gi://Clutter'
-import * as GLib from 'gi://GLib'
-import * as Meta from 'gi://Meta'
-import * as St from 'gi://St'
-import * as GObject from 'gi://GObject'
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import Meta from 'gi://Meta';
+import St from 'gi://St';
+import GObject from 'gi://GObject';
 
 // local modules
-import * as UI from '../utils/ui.js'
-import { _log } from '../utils/log.js'
-import { constants } from '../utils/constants.js'
-import { ClipShadowEffect } from '../effect/clip_shadow_effect.js'
-import * as types from '../utils/types.js'
-import { settings } from '../utils/settings.js'
-import { RoundedCornersEffect } from '../effect/rounded_corners_effect.js'
+import * as UI from '../utils/ui.js';
+import { _log } from '../utils/log.js';
+import { constants } from '../utils/constants.js';
+import { ClipShadowEffect } from '../effect/clip_shadow_effect.js';
+import * as types from '../utils/types.js';
+import { settings } from '../utils/settings.js';
+import { RoundedCornersEffect } from '../effect/rounded_corners_effect.js';
 
 // types, those import statements will be removed in output javascript files.
-import { SchemasKeys } from '../utils/settings.js'
-import { global } from '@global'
-import { EffectManager, ExtensionsWindowActor } from '../utils/types.js'
+import type { SchemasKeys } from '../utils/settings.js';
+//import { global } from '@global'
+import type { EffectManager, ExtensionsWindowActor } from '../utils/types.js';
 type RoundedCornersEffectType = InstanceType<typeof RoundedCornersEffect>
 
 // --------------------------------------------------------------- [end imports]
 
 export class RoundedCornersManager implements EffectManager {
-  enabled = true
+  enabled = true;
 
   /** Rounded corners settings */
-  private global_rounded_corners = settings ().global_rounded_corner_settings
-  private custom_rounded_corners = settings ().custom_rounded_corner_settings
+  private global_rounded_corners = settings().global_rounded_corner_settings;
+  private custom_rounded_corners = settings().custom_rounded_corner_settings;
 
   // ---------------------------------------------------------- [public methods]
 
-  on_add_effect (actor: ExtensionsWindowActor): void {
-    _log ('opened: ' + actor?.meta_window.title + ': ' + actor)
+  on_add_effect(actor: ExtensionsWindowActor): void {
+    _log('opened: ' + actor?.metaWindow.title + ': ' + actor);
 
-    const win = actor.meta_window
+    const win = actor.metaWindow;
 
     // If application failed check, then just return.
-    if (!this._should_enable_effect (win)) {
-      return
+    if (!this._should_enable_effect(win)) {
+      return;
     }
 
     // Add rounded corners shader to window
-    this._actor_to_rounded (actor)?.add_effect_with_name (
+    this._actor_to_rounded(actor)?.add_effect_with_name(
       constants.ROUNDED_CORNERS_EFFECT,
-      new RoundedCornersEffect ()
-    )
+      new RoundedCornersEffect()
+    );
 
     // Turn off original shadow for ssd x11 window.
     // - For ssd client in X11, shadow is drew by window manager
     // - For csd client, shadow is drew by application itself, it has been cut
     //   out by rounded corners effect
-    if (actor.shadow_mode !== undefined) {
-      actor.shadow_mode = Meta.ShadowMode.FORCED_OFF
-    }
+    //if (actor.shadow_mode !== undefined) {
+    //  actor.shadow_mode = Meta.ShadowMode.FORCED_OFF
+    //}
     // So we have to create an shadow actor for rounded corners shadows
-    const shadow = this._create_shadow (actor)
+    const shadow = this._create_shadow(actor);
     // Bind properties between shadow and window
-    const flag = GObject.BindingFlags.SYNC_CREATE
+    const flag = GObject.BindingFlags.SYNC_CREATE;
     for (const prop of [
       'pivot-point',
       'translation-x',
@@ -65,226 +65,226 @@ export class RoundedCornersManager implements EffectManager {
       'scale-x',
       'scale-y',
     ]) {
-      actor.bind_property (prop, shadow, prop, flag)
+      actor.bind_property(prop, shadow, prop, flag);
     }
     // Store visible binding so that we can control the visible of shadow
     // in some time.
-    const prop = 'visible'
-    const visible_binding = actor.bind_property (prop, shadow, prop, flag)
+    const prop = 'visible';
+    const visible_binding = actor.bind_property(prop, shadow, prop, flag);
 
     // Store shadow, app type, visible binding, so that we can query them later
     actor.__rwc_rounded_window_info = {
       shadow,
       visible_binding,
       unminimized_timeout_id: 0,
-    }
+    };
   }
 
-  on_remove_effect (actor: ExtensionsWindowActor): void {
+  on_remove_effect(actor: ExtensionsWindowActor): void {
     // Remove rounded corners effect
-    const name = constants.ROUNDED_CORNERS_EFFECT
-    this._actor_to_rounded (actor)?.remove_effect_by_name (name)
+    const name = constants.ROUNDED_CORNERS_EFFECT;
+    this._actor_to_rounded(actor)?.remove_effect_by_name(name);
 
     // Restore shadow for x11 windows
-    if (actor.shadow_mode) {
-      actor.shadow_mode = Meta.ShadowMode.AUTO
-    }
+    //if (actor.shadow_mode) {
+    //  actor.shadow_mode = Meta.ShadowMode.AUTO
+    //}
 
     // Remove shadow actor
-    const shadow = actor.__rwc_rounded_window_info?.shadow
+    const shadow = actor.__rwc_rounded_window_info?.shadow;
     if (shadow) {
-      global.window_group.remove_child (shadow)
-      shadow.clear_effects ()
-      shadow.destroy ()
+      global.windowGroup.remove_child(shadow);
+      shadow.clear_effects();
+      shadow.destroy();
     }
 
     // Remove all timeout handler
-    const timeout_id = actor.__rwc_rounded_window_info?.unminimized_timeout_id
-    if (timeout_id) GLib.source_remove (timeout_id)
-    delete actor.__rwc_rounded_window_info
+    const timeout_id = actor.__rwc_rounded_window_info?.unminimized_timeout_id;
+    if (timeout_id) GLib.source_remove(timeout_id);
+    delete actor.__rwc_rounded_window_info;
   }
 
-  on_minimize (actor: ExtensionsWindowActor): void {
-    const info = actor.__rwc_rounded_window_info
-    const binding = info?.visible_binding
-    const shadow = info?.shadow
+  on_minimize(actor: ExtensionsWindowActor): void {
+    const info = actor.__rwc_rounded_window_info;
+    const binding = info?.visible_binding;
+    const shadow = info?.shadow;
     if (shadow && binding) {
-      binding.unbind ()
-      shadow.visible = false
+      binding.unbind();
+      shadow.visible = false;
     }
   }
 
-  on_unminimize (actor: ExtensionsWindowActor): void {
-    this._restore_shadow (actor)
+  on_unminimize(actor: ExtensionsWindowActor): void {
+    this._restore_shadow(actor);
 
     // Requeue layout after 300ms
-    if (actor.first_child && actor.__rwc_rounded_window_info) {
-      const info = actor.__rwc_rounded_window_info
+    if (actor.firstChild && actor.__rwc_rounded_window_info) {
+      const info = actor.__rwc_rounded_window_info;
 
       // Clear prev handler
-      let id = info.unminimized_timeout_id
-      if (id) GLib.source_remove (id)
-      id = GLib.timeout_add (GLib.PRIORITY_DEFAULT, 300, () => {
-        actor.first_child.queue_relayout ()
-        return false
-      })
+      let id = info.unminimized_timeout_id;
+      if (id) GLib.source_remove(id);
+      id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+        actor.firstChild.queue_relayout();
+        return false;
+      });
 
       // update handler, it will be clear when window is closed
-      info.unminimized_timeout_id = id
+      info.unminimized_timeout_id = id;
     }
   }
 
-  on_switch_workspace (actor: types.ExtensionsWindowActor) {
-    this._restore_shadow (actor)
+  on_switch_workspace(actor: types.ExtensionsWindowActor) {
+    this._restore_shadow(actor);
   }
 
-  on_restacked (actor: ExtensionsWindowActor): void {
+  on_restacked(actor: ExtensionsWindowActor): void {
     // When windows restacked, change order of shadow actor too
     if (!actor.visible) {
-      return
+      return;
     }
-    const shadow = actor.__rwc_rounded_window_info?.shadow
+    const shadow = actor.__rwc_rounded_window_info?.shadow;
     if (shadow) {
-      global.window_group.set_child_below_sibling (shadow, actor)
+      global.windowGroup.set_child_below_sibling(shadow, actor);
     }
   }
 
-  on_size_changed (actor: ExtensionsWindowActor): void {
-    const win = actor.meta_window
+  on_size_changed(actor: ExtensionsWindowActor): void {
+    const win = actor.metaWindow;
 
-    const window_info = actor.__rwc_rounded_window_info
+    const window_info = actor.__rwc_rounded_window_info;
     // Get rounded corners effect from window actor
-    const effect = this._actor_to_rounded (actor)?.get_effect (
+    const effect = this._actor_to_rounded(actor)?.get_effect(
       constants.ROUNDED_CORNERS_EFFECT
-    ) as RoundedCornersEffectType | null
+    ) as RoundedCornersEffectType | null;
     if (!effect || !window_info) {
-      return
+      return;
     }
 
     // Skip rounded corners when window is fullscreen & maximize
-    const cfg = this._get_rounded_corners_cfg (win)
-    const should_rounded = UI.ShouldHasRoundedCorners (win, cfg)
+    const cfg = this._get_rounded_corners_cfg(win);
+    const should_rounded = UI.ShouldHasRoundedCorners(win, cfg);
 
     if (!should_rounded && effect.enabled) {
-      _log ('Disable rounded corners effect for maximized window', win.title)
-      effect.enabled = false
-      this.on_focus_changed (actor)
-      return
+      _log('Disable rounded corners effect for maximized window', win.title);
+      effect.enabled = false;
+      this.on_focus_changed(actor);
+      return;
     }
     // Restore Rounded effect when un-maximized
     if (should_rounded && !effect.enabled) {
-      _log ('Restore rounded effect for maximized window', win.title)
-      effect.enabled = true
-      this.on_focus_changed (actor)
+      _log('Restore rounded effect for maximized window', win.title);
+      effect.enabled = true;
+      this.on_focus_changed(actor);
     }
 
     // Cache the offset, so that we can calculate this value once
-    const content_offset_of_win = UI.computeWindowContentsOffset (win)
+    const content_offset_of_win = UI.computeWindowContentsOffset(win);
 
     // When size changed. update uniforms for window
-    effect.update_uniforms (
-      UI.WindowScaleFactor (win),
+    effect.update_uniforms(
+      UI.WindowScaleFactor(win),
       cfg,
-      this._compute_bounds (actor, content_offset_of_win),
+      this._compute_bounds(actor, content_offset_of_win),
       {
-        width: settings ().border_width,
-        color: settings ().border_color,
+        width: settings().border_width,
+        color: settings().border_color,
       }
-    )
+    );
 
     // Update BindConstraint for shadow
-    const shadow = window_info.shadow
-    const offsets = this._compute_shadow_actor_offset (
+    const shadow = window_info.shadow;
+    const offsets = this._compute_shadow_actor_offset(
       actor,
       content_offset_of_win
-    )
-    const constraints = shadow.get_constraints ()
-    constraints.forEach ((constraint, i) => {
+    );
+    const constraints = shadow.get_constraints();
+    constraints.forEach((constraint, i) => {
       if (constraint instanceof Clutter.BindConstraint) {
-        constraint.offset = offsets[i]
+        constraint.offset = offsets[i];
       }
-    })
+    });
   }
 
-  on_focus_changed (actor: ExtensionsWindowActor): void {
-    const win = actor.meta_window
-    const shadow = actor.__rwc_rounded_window_info?.shadow
+  on_focus_changed(actor: ExtensionsWindowActor): void {
+    const win = actor.metaWindow;
+    const shadow = actor.__rwc_rounded_window_info?.shadow;
     if (!shadow) {
-      return
+      return;
     }
 
     const shadow_settings = win.appears_focused
-      ? settings ().focused_shadow
-      : settings ().unfocused_shadow
+      ? settings().focused_shadow
+      : settings().unfocused_shadow;
 
-    const { border_radius, padding } = this._get_rounded_corners_cfg (win)
+    const { border_radius, padding } = this._get_rounded_corners_cfg(win);
 
-    this._update_shadow_actor_style (
+    this._update_shadow_actor_style(
       win,
       shadow,
       border_radius,
       shadow_settings,
       padding
-    )
+    );
   }
 
-  on_settings_changed (key: SchemasKeys): void {
+  on_settings_changed(key: SchemasKeys): void {
     switch (key) {
     case 'skip-libadwaita-app':
     case 'skip-libhandy-app':
     case 'black-list':
-      this._update_all_window_effect_state ()
-      break
+      this._update_all_window_effect_state();
+      break;
     case 'focused-shadow':
     case 'unfocused-shadow':
-      this._update_all_shadow_actor_style ()
-      break
+      this._update_all_shadow_actor_style();
+      break;
     case 'global-rounded-corner-settings':
     case 'custom-rounded-corner-settings':
     case 'border-color':
     case 'border-width':
     case 'tweak-kitty-terminal':
-      this._update_all_rounded_corners_settings ()
-      break
+      this._update_all_rounded_corners_settings();
+      break;
     default:
     }
   }
 
   // --------------------------------------------------------- [private methods]
 
-  private _restore_shadow (actor: ExtensionsWindowActor) {
-    const info = actor.__rwc_rounded_window_info
+  private _restore_shadow(actor: ExtensionsWindowActor) {
+    const info = actor.__rwc_rounded_window_info;
     if (!info) {
-      return
+      return;
     }
-    const prop = 'visible'
-    const flag = GObject.BindingFlags.SYNC_CREATE
-    info.visible_binding = actor.bind_property (prop, info.shadow, prop, flag)
+    const prop = 'visible';
+    const flag = GObject.BindingFlags.SYNC_CREATE;
+    info.visible_binding = actor.bind_property(prop, info.shadow, prop, flag);
   }
 
   /**
    * Check whether a window should be enable rounded corners effect
    * @param win Meta.Window to test
    */
-  private _should_enable_effect (
+  private _should_enable_effect(
     win: Meta.Window & { __app_type?: UI.AppType }
   ): boolean {
     // DING (Desktop Icons NG) is a extensions that create a gtk
     // application to show desktop grid on background, we need to
     // skip it coercively.
     // https://extensions.gnome.org/extension/2087/desktop-icons-ng-ding/
-    if (win.gtk_application_id === 'com.rastersoft.ding') {
-      return false
+    if (win.gtkApplicationId === 'com.rastersoft.ding') {
+      return false;
     }
 
     // Skip applications in black list.
-    const wm_class_instance = win.get_wm_class_instance ()
+    const wm_class_instance = win.get_wm_class_instance();
     if (wm_class_instance == null) {
-      _log (`Warning: wm_class_instance of ${win}: ${win.title} is null`)
-      return false
+      _log(`Warning: wm_class_instance of ${win}: ${win.title} is null`);
+      return false;
     }
-    if (settings ().black_list.includes (wm_class_instance)) {
-      return false
+    if (settings().black_list.includes(wm_class_instance)) {
+      return false;
     }
 
     // Check type of window, only need to add rounded corners to normal
@@ -293,88 +293,88 @@ export class RoundedCornersManager implements EffectManager {
       Meta.WindowType.NORMAL,
       Meta.WindowType.DIALOG,
       Meta.WindowType.MODAL_DIALOG,
-    ].includes (win.window_type)
+    ].includes(win.windowType);
     if (!normal_type) {
-      return false
+      return false;
     }
 
     // Skip libhandy / libadwaita applications according the settings.
-    const { AppType, getAppType } = UI
-    const app_type = win.__app_type ?? getAppType (win)
-    win.__app_type = app_type // cache result
-    _log ('Check Type of window:' + `${win.title} => ${AppType[app_type]}`)
+    const { AppType, getAppType } = UI;
+    const app_type = win.__app_type ?? getAppType(win);
+    win.__app_type = app_type; // cache result
+    _log('Check Type of window:' + `${win.title} => ${AppType[app_type]}`);
 
-    if (settings ().skip_libadwaita_app && app_type === AppType.LibAdwaita) {
-      return false
+    if (settings().skip_libadwaita_app && app_type === AppType.LibAdwaita) {
+      return false;
     }
-    if (settings ().skip_libhandy_app && app_type === AppType.LibHandy) {
-      return false
+    if (settings().skip_libhandy_app && app_type === AppType.LibHandy) {
+      return false;
     }
 
-    return true
+    return true;
   }
 
   /**
    * return Clutter.Actor that should be add rounded corners,
    * In Wayland, we will add rounded corners effect to WindowActor
-   * In XOrg, we will add rounded corners effect to WindowActor.first_child
+   * In XOrg, we will add rounded corners effect to WindowActor.firstChild
    */
-  private _actor_to_rounded (actor: Meta.WindowActor): Clutter.Actor | null {
-    const type = actor.meta_window.get_client_type ()
-    return type == Meta.WindowClientType.X11 ? actor.get_first_child () : actor
+  private _actor_to_rounded(actor: Meta.WindowActor): Clutter.Actor | null {
+    const type = actor.metaWindow.get_client_type();
+    return type == Meta.WindowClientType.X11 ? actor.get_first_child() : actor;
   }
 
   /**
    * Create Shadow for rounded corners window
    * @param actor -  window actor which has been setup rounded corners effect
    */
-  private _create_shadow (actor: Meta.WindowActor): St.Bin {
-    const shadow = new St.Bin ({
+  private _create_shadow(actor: Meta.WindowActor): St.Bin {
+    const shadow = new St.Bin({
       name: 'Shadow Actor',
-      child: new St.Bin ({
-        x_expand: true,
-        y_expand: true,
+      child: new St.Bin({
+        xExpand: true,
+        yExpand: true,
       }),
     })
-    ;(shadow.first_child as St.Bin).add_style_class_name ('shadow')
+    ;(shadow.firstChild as St.Bin).add_style_class_name('shadow');
 
-    this._update_shadow_actor_style (
-      actor.meta_window,
+    this._update_shadow_actor_style(
+      actor.metaWindow,
       shadow,
       this.global_rounded_corners?.border_radius,
-      actor.meta_window.appears_focused
-        ? settings ().focused_shadow
-        : settings ().unfocused_shadow
-    )
+      actor.metaWindow.appears_focused
+        ? settings().focused_shadow
+        : settings().unfocused_shadow
+    );
 
     // We have to clip the shadow because of this issues:
     // https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4474
-    shadow.add_effect_with_name (
+    shadow.add_effect_with_name(
       constants.CLIP_SHADOW_EFFECT,
-      new ClipShadowEffect ()
-    )
+      new ClipShadowEffect()
+    );
 
     // Insert shadow actor below window actor, now shadow actor
     // will show below window actor
-    global.window_group.insert_child_below (shadow, actor)
+    global.windowGroup.insert_child_below(shadow, actor);
 
     // Bind position and size between window and shadow
     for (let i = 0; i < 4; i++) {
-      const constraint = new Clutter.BindConstraint ({
+      const constraint = new Clutter.BindConstraint({
         source: actor,
         coordinate: i,
         offset: 0,
-      })
-      shadow.add_constraint (constraint)
+      });
+      shadow.add_constraint(constraint);
     }
 
     // Return the shadow we create, it will be store into
     // this.rounded_windows
-    return shadow
+    return shadow;
   }
 
   /** Compute outer bound of rounded corners for window actor */
-  private _compute_bounds (
+  private _compute_bounds(
     actor: Meta.WindowActor,
     [x, y, width, height]: [number, number, number, number]
   ): types.Bounds {
@@ -383,28 +383,28 @@ export class RoundedCornersManager implements EffectManager {
       y1: y + 1,
       x2: x + actor.width + width,
       y2: y + actor.height + height,
-    }
+    };
 
     // Kitty draw it's window decoration by itself, we need recompute the
     // outer bounds for kitty.
-    if (settings ().tweak_kitty_terminal) {
-      const type = Meta.WindowClientType.WAYLAND
+    if (settings().tweak_kitty_terminal) {
+      const type = Meta.WindowClientType.WAYLAND;
       if (
-        actor.meta_window.get_client_type () == type &&
-        actor.meta_window.get_wm_class_instance () === 'kitty'
+        actor.metaWindow.get_client_type() == type &&
+        actor.metaWindow.get_wm_class_instance() === 'kitty'
       ) {
-        const scale = UI.WindowScaleFactor (actor.meta_window)
-        bounds.x1 += 11 * scale /* shadow in left   of kitty */
-        bounds.y1 += 35 * scale /* shadow in top    of kitty */
-        bounds.x2 -= 11 * scale /* shadow in right  of kitty */
-        bounds.y2 -= 11 * scale /* shadow in bottom of kitty */
+        const scale = UI.WindowScaleFactor(actor.metaWindow);
+        bounds.x1 += 11 * scale; /* shadow in left   of kitty */
+        bounds.y1 += 35 * scale; /* shadow in top    of kitty */
+        bounds.x2 -= 11 * scale; /* shadow in right  of kitty */
+        bounds.y2 -= 11 * scale; /* shadow in bottom of kitty */
       }
     }
 
-    return bounds
+    return bounds;
   }
 
-  private _compute_shadow_actor_offset (
+  private _compute_shadow_actor_offset(
     actor: Meta.WindowActor,
     [offset_x, offset_y, offset_width, offset_height]: [
       number,
@@ -413,8 +413,8 @@ export class RoundedCornersManager implements EffectManager {
       number
     ]
   ): number[] {
-    const win = actor.meta_window
-    const shadow_padding = constants.SHADOW_PADDING * UI.WindowScaleFactor (win)
+    const win = actor.metaWindow;
+    const shadow_padding = constants.SHADOW_PADDING * UI.WindowScaleFactor(win);
 
     // If remove UI.scaleFactor(), it should can be works if
     // experimental-features of mutter  'scale-monitor-framebuffer' enabled
@@ -425,25 +425,25 @@ export class RoundedCornersManager implements EffectManager {
       offset_y - shadow_padding,
       2 * shadow_padding + offset_width,
       2 * shadow_padding + offset_height,
-    ]
+    ];
   }
 
   /** Update css style of shadow actor */
-  private _update_shadow_actor_style (
+  private _update_shadow_actor_style(
     win: Meta.Window,
     actor: St.Bin,
     border_radius = this.global_rounded_corners?.border_radius,
-    shadow = settings ().focused_shadow,
+    shadow = settings().focused_shadow,
     padding = this.global_rounded_corners?.padding
   ) {
     if (!border_radius || !padding) {
-      return
+      return;
     }
-    const { left, right, top, bottom } = padding
+    const { left, right, top, bottom } = padding;
 
     // Increasing border_radius when smoothing is on
     if (this.global_rounded_corners !== null) {
-      border_radius *= 1.0 + this.global_rounded_corners.smoothing
+      border_radius *= 1.0 + this.global_rounded_corners.smoothing;
     }
 
     // Sadly, the scale of style of St.Widget may be different between scale
@@ -453,109 +453,109 @@ export class RoundedCornersManager implements EffectManager {
     //
     // So, we have to adjustment this different
 
-    const original_scale = St.ThemeContext.get_for_stage (
+    const original_scale = St.ThemeContext.get_for_stage(
       global.stage as Clutter.Stage
-    ).scale_factor
-    const win_scale = UI.WindowScaleFactor (win)
+    ).scaleFactor;
+    const win_scale = UI.WindowScaleFactor(win);
 
     // Now scale factor for shadow actor should be correct.
-    const scale_of_style = win_scale / original_scale
+    const scale_of_style = win_scale / original_scale;
 
     // _log (JSON.stringify ({ original_scale, win_scale }))
 
     actor.style = `padding: ${constants.SHADOW_PADDING * scale_of_style}px
-        /*background: yellow*/;`
+        /*background: yellow*/;`;
 
-    const child = actor.first_child as St.Bin
+    const child = actor.firstChild as St.Bin;
 
     if (
-      win.maximized_horizontally ||
-      win.maximized_vertically ||
+      win.maximizedHorizontally ||
+      win.maximizedVertically ||
       win.fullscreen
     ) {
-      child.style = 'opacity: 0;'
+      child.style = 'opacity: 0;';
     } else {
       child.style = `
         background: white;
         border-radius: ${border_radius * scale_of_style}px;
-        ${types.box_shadow_css (shadow, scale_of_style)};
+        ${types.box_shadow_css(shadow, scale_of_style)};
         margin: ${top * scale_of_style}px
                 ${right * scale_of_style}px
                 ${bottom * scale_of_style}px
-                ${left * scale_of_style}px;`
+                ${left * scale_of_style}px;`;
     }
 
-    child.queue_redraw ()
+    child.queue_redraw();
   }
 
   /** Traversal all windows, add or remove rounded corners for them */
-  private _update_all_window_effect_state () {
-    global.get_window_actors ().forEach ((actor) => {
-      const should_have_effect = this._should_enable_effect (actor.meta_window)
-      const has_effect = UI.get_rounded_corners_effect (actor) != null
+  private _update_all_window_effect_state() {
+    global.get_window_actors().forEach((actor) => {
+      const should_have_effect = this._should_enable_effect(actor.metaWindow);
+      const has_effect = UI.get_rounded_corners_effect(actor) != null;
 
       if (should_have_effect && !has_effect) {
-        this.on_add_effect (actor)
-        this.on_size_changed (actor)
-        return
+        this.on_add_effect(actor);
+        this.on_size_changed(actor);
+        return;
       }
 
       if (!should_have_effect && has_effect) {
-        this.on_remove_effect (actor)
-        return
+        this.on_remove_effect(actor);
+        return;
       }
-    })
+    });
   }
 
   /** Update style for all shadow actors */
-  private _update_all_shadow_actor_style () {
-    for (const actor of global.get_window_actors ()) {
-      const info = (actor as ExtensionsWindowActor).__rwc_rounded_window_info
+  private _update_all_shadow_actor_style() {
+    for (const actor of global.get_window_actors()) {
+      const info = (actor as ExtensionsWindowActor).__rwc_rounded_window_info;
       if (!info) {
-        continue
+        continue;
       }
-      const { shadow } = info
-      const win = actor.meta_window
-      const shadow_cfg = actor.meta_window.appears_focused
-        ? settings ().focused_shadow
-        : settings ().unfocused_shadow
-      const { border_radius, padding } = this._get_rounded_corners_cfg (
-        actor.meta_window
-      )
+      const { shadow } = info;
+      const win = actor.metaWindow;
+      const shadow_cfg = actor.metaWindow.appears_focused
+        ? settings().focused_shadow
+        : settings().unfocused_shadow;
+      const { border_radius, padding } = this._get_rounded_corners_cfg(
+        actor.metaWindow
+      );
 
-      this._update_shadow_actor_style (
+      this._update_shadow_actor_style(
         win,
         shadow,
         border_radius,
         shadow_cfg,
         padding
-      )
+      );
     }
   }
 
-  private _get_rounded_corners_cfg (win: Meta.Window): types.RoundedCornersCfg {
-    return UI.ChoiceRoundedCornersCfg (
-      this.global_rounded_corners ?? settings ().global_rounded_corner_settings,
-      this.custom_rounded_corners ?? settings ().custom_rounded_corner_settings,
+  private _get_rounded_corners_cfg(win: Meta.Window): types.RoundedCornersCfg {
+    return UI.ChoiceRoundedCornersCfg(
+      this.global_rounded_corners ?? settings().global_rounded_corner_settings,
+      this.custom_rounded_corners ?? settings().custom_rounded_corner_settings,
       win
-    )
+    );
   }
 
   /**
    * This method will be called when global rounded corners settings changed.
    */
-  private _update_all_rounded_corners_settings () {
-    this.global_rounded_corners = settings ().global_rounded_corner_settings
-    this.custom_rounded_corners = settings ().custom_rounded_corner_settings
+  private _update_all_rounded_corners_settings() {
+    this.global_rounded_corners = settings().global_rounded_corner_settings;
+    this.custom_rounded_corners = settings().custom_rounded_corner_settings;
 
-    for (const actor of global.get_window_actors ()) {
-      const info = (actor as ExtensionsWindowActor).__rwc_rounded_window_info
+    for (const actor of global.get_window_actors()) {
+      const info = (actor as ExtensionsWindowActor).__rwc_rounded_window_info;
       if (!info) {
-        continue
+        continue;
       }
-      this.on_size_changed (actor)
+      this.on_size_changed(actor);
     }
 
-    this._update_all_shadow_actor_style ()
+    this._update_all_shadow_actor_style();
   }
 }

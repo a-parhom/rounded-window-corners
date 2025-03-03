@@ -61,7 +61,7 @@ msgstr ""
 msgid "Can't add to list, because it has exists"
 msgstr ""
 
-#: src/preferences/widgets/app_row.ts:105
+#: src/preferences/widgets/app_row.ts:110
 msgid "Can't pick a window window from this position"
 msgstr ""
 

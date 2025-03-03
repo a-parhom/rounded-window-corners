@@ -1,5 +1,5 @@
 // Types
-import * as GObject from 'gi://GObject'
+import GObject from 'gi://GObject';
 
 // ---------------------------------------------------------------- [end import]
 
@@ -13,7 +13,7 @@ export class Connections {
    * Map object to store signal sources and their handlers
    * @type {Map<GObject.Object, { [signal_name: string]: number }>}
    */
-  private connections: _Map = new Map ()
+  private connections: _Map = new Map();
 
   /**
    * Handler signal for a GObject
@@ -29,28 +29,28 @@ export class Connections {
    * @param source - Signal source
    * @param args - Arguments pass into GObject.Object.connect()
    */
-  connect<T extends GObject.Object> (source: T, ...args: any): void {
-    const signal: string = args[0]
-    const id: number = source.connect (args[0], args[1])
+  connect<T extends GObject.Object>(source: T, ...args: any): void {
+    const signal: string = args[0];
+    const id: number = source.connect(args[0], args[1]);
 
     // Source has been added into manager
     {
-      const handlers = this.connections.get (source)
+      const handlers = this.connections.get(source);
       if (handlers !== undefined) {
         if (handlers[signal] !== undefined) {
-          handlers[signal].push (id)
-          return
+          handlers[signal].push(id);
+          return;
         } else {
-          handlers[signal] = [id]
-          return
+          handlers[signal] = [id];
+          return;
         }
       }
     }
 
     // Source is first time register signal
-    const handlers: { [signal: string]: number[] } = {}
-    handlers[signal] = [id]
-    this.connections.set (source, handlers)
+    const handlers: { [signal: string]: number[] } = {};
+    handlers[signal] = [id];
+    this.connections.set(source, handlers);
   }
 
   disconnect<T extends GObject.Object>(
@@ -59,20 +59,20 @@ export class Connections {
   ): void
   disconnect(source: GObject.Object, signal: string): void
   /** Disconnect signal for source */
-  disconnect<T extends GObject.Object> (
+  disconnect<T extends GObject.Object>(
     source: T,
     signal: Parameters<T['connect']>[0]
   ) {
-    const handlers = this.connections.get (source)
+    const handlers = this.connections.get(source);
     if (handlers !== undefined) {
-      const handler = handlers[signal]
+      const handler = handlers[signal];
       if (handler !== undefined) {
-        handler.forEach ((id) => source.disconnect (id))
-        delete handlers[signal]
-        if (Object.keys (handler).length == 0) {
-          this.connections.delete (source)
+        handler.forEach((id) => source.disconnect(id));
+        delete handlers[signal];
+        if (Object.keys(handler).length == 0) {
+          this.connections.delete(source);
         }
-        return
+        return;
       }
     }
   }
@@ -83,45 +83,45 @@ export class Connections {
   /** Disconnect **all** signals for **all** objects */
   disconnect_all(): void
 
-  disconnect_all (source?: GObject.Object) {
+  disconnect_all(source?: GObject.Object) {
     // If provide source,  disconnect all signal of it
     if (source !== undefined) {
-      const handlers = this.connections.get (source)
+      const handlers = this.connections.get(source);
       if (handlers !== undefined) {
-        Object.keys (handlers).forEach ((signal) => {
-          handlers[signal].forEach ((id) => source.disconnect (id))
-          delete handlers[signal]
-        })
-        this.connections.delete (source)
+        Object.keys(handlers).forEach((signal) => {
+          handlers[signal].forEach((id) => source.disconnect(id));
+          delete handlers[signal];
+        });
+        this.connections.delete(source);
       }
-      return
+      return;
     }
 
     // otherwise clear signal for all objects.
-    this.connections.forEach ((handlers, source) => {
-      Object.keys (handlers).forEach ((signal) => {
-        handlers[signal].forEach ((id) => source.disconnect (id))
-        delete handlers[signal]
-      })
-    })
-    this.connections.clear ()
+    this.connections.forEach((handlers, source) => {
+      Object.keys(handlers).forEach((signal) => {
+        handlers[signal].forEach((id) => source.disconnect(id));
+        delete handlers[signal];
+      });
+    });
+    this.connections.clear();
   }
 }
 
 /** A singleton of connections */
-let _connections: Connections | null = null
+let _connections: Connections | null = null;
 
 export const connections = {
   get: () => {
     if (_connections === null) {
-      _connections = new Connections ()
+      _connections = new Connections();
     }
-    return _connections
+    return _connections;
   },
   del: () => {
-    _connections = null
+    _connections = null;
   },
-}
+};
 
 //              Signal source     signal name            it's handler
 type _Map = Map<GObject.Object, { [signal_name: string]: number[] }>

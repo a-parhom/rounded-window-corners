@@ -15,4 +15,4 @@ export const constants = {
   DON_T_CONFIG: 'Don\'t Configuration in Custom Page',
   /** Name of shadow actor to be added in overview */
   OVERVIEW_SHADOW_ACTOR: 'Shadow Actor (Overview)',
-}
+};

@@ -56,11 +56,11 @@ msgstr ""
 msgid "Bottom"
 msgstr ""
 
-#: src/preferences/pages/blacklist.ts:65 src/preferences/pages/custom.ts:177
+#: src/preferences/pages/blacklist.ts:64 src/preferences/pages/custom.ts:174
 msgid "Can't add to list, because it has exists"
 msgstr ""
 
-#: src/preferences/widgets/app_row.ts:106
+#: src/preferences/widgets/app_row.ts:110
 msgid "Can't pick a window window from this position"
 msgstr ""
 
@@ -85,15 +85,15 @@ msgstr ""
 msgid "Debug"
 msgstr ""
 
-#: src/preferences/widgets/edit_shadow_window.ts:58
+#: src/preferences/widgets/edit_shadow_window.ts:59
 msgid "Edit Shadow for Rounded Corners Windows"
 msgstr ""
 
-#: src/preferences/pages/custom.ts:189
+#: src/preferences/pages/custom.ts:186
 msgid "Enable"
 msgstr ""
 
-#: src/preferences/pages/custom.ts:193
+#: src/preferences/pages/custom.ts:190
 msgid "Enable custom settings for this window"
 msgstr ""
 
@@ -102,7 +102,7 @@ msgstr ""
 msgid "Enable Log"
 msgstr ""
 
-#: src/utils/constants.ts:17
+#: src/utils/prefs.ts:48
 msgid "Expand this row to pick a window."
 msgstr ""
 
@@ -183,7 +183,7 @@ msgstr ""
 msgid "Right"
 msgstr ""
 
-#: src/utils/constants.ts:21
+#: src/utils/ui.ts:103 src/utils/ui.ts:132
 msgid "Rounded Corners Settings..."
 msgstr ""
 

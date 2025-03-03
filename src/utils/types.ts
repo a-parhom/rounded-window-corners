@@ -1,23 +1,23 @@
-import * as Clutter from 'gi://Clutter'
-import * as GObject from 'gi://GObject'
-import * as Meta from 'gi://Meta'
-import * as St from 'gi://St'
-import * as Graphene from 'gi://Graphene'
-import { SchemasKeys } from '../utils/settings.js'
+import type Clutter from 'gi://Clutter';
+import type GObject from 'gi://GObject';
+import type Meta from 'gi://Meta';
+import type St from 'gi://St';
+import type Graphene from 'gi://Graphene';
+import type { SchemasKeys } from '../utils/settings.js';
 
 /** Bounds of rounded corners  */
 export class Bounds {
-  x1 = 0
-  y1 = 0
-  x2 = 0
-  y2 = 0
+  x1 = 0;
+  y1 = 0;
+  x2 = 0;
+  y2 = 0;
 }
 
 export class Padding {
-  left = 0
-  right = 0
-  top = 0
-  bottom = 0
+  left = 0;
+  right = 0;
+  top = 0;
+  bottom = 0;
 }
 
 /** Store into settings, rounded corners configuration  */
@@ -49,8 +49,8 @@ export const box_shadow_css = (box_shadow: BoxShadow, scale = 1) => {
           ${box_shadow.vertical_offset * scale}px
           ${box_shadow.blur_offset * scale}px
           ${box_shadow.spread_radius * scale}px
-          rgba(0,0,0, ${box_shadow.opacity / 100})`
-}
+          rgba(0,0,0, ${box_shadow.opacity / 100})`;
+};
 
 export interface EffectManager {
   enabled: boolean
@@ -75,6 +75,6 @@ export type ExtensionsWindowActor = Meta.WindowActor & {
     blur_actor: Clutter.Actor
     visible_binding: GObject.Binding
   }
-  shadow_mode?: Meta.ShadowMode
+  //shadow_mode?: Meta.ShadowMode
   __rwc_last_size?: Graphene.Size
 }
