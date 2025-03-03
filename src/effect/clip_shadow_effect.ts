@@ -2,6 +2,7 @@
 import GObject from 'gi://GObject';
 import Shell from 'gi://Shell';
 import Clutter from 'gi://Clutter';
+import Cogl from 'gi://Cogl';
 
 // local modules
 import { loadShader } from '../utils/io.js';
@@ -17,7 +18,7 @@ export const ClipShadowEffect = GObject.registerClass(
   {},
   class extends Shell.GLSLEffect {
     vfunc_build_pipeline(): void {
-      const hook = Shell.SnippetHook.FRAGMENT;
+      const hook = Cogl.SnippetHook.FRAGMENT;
       this.add_glsl_snippet(hook, declarations, code, false);
     }
 

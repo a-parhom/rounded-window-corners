@@ -2,6 +2,7 @@
 import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import Cogl from 'gi://Cogl';
 
 // local modules
 import { loadShader } from '../utils/io.js';
@@ -64,7 +65,7 @@ export const RoundedCornersEffect = GObject.registerClass(
     }
 
     vfunc_build_pipeline(): void {
-      const type = Shell.SnippetHook.FRAGMENT;
+      const type = Cogl.SnippetHook.FRAGMENT;
       this.add_glsl_snippet(type, declarations, code, false);
     }
 
