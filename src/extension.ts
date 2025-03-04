@@ -2,7 +2,7 @@
 import Graphene from 'gi://Graphene';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
-import Meta from 'gi://Meta';
+import type Meta from 'gi://Meta';
 import GObject from 'gi://GObject';
 
 // gnome-shell modules
@@ -19,7 +19,6 @@ import { connections } from './utils/connections.js';
 import { init_settings, settings } from './utils/settings.js';
 import { Services } from './dbus/services.js';
 import { LinearFilterEffect } from './effect/linear_filter_effect.js';
-import { RoundedCornersEffect } from './effect/rounded_corners_effect.js';
 import { WindowActorTracker } from './manager/effect_manager.js';
 
 // types, which will be removed in output
@@ -137,81 +136,11 @@ export default class RoundedWindowCorners extends Extension {
       }
       this.insert_child_below(shadow_clone, windowContainer);
 
-      // In Gnome 43, preview windows in overview will be blurry if there are
-      // more than two workspaces using, We need add rounded corners to preview
-      // window in overview manually to avoid blurry preview windows.
-      type TypeRoundedCornersEffect =
-        | InstanceType<typeof RoundedCornersEffect>
-        | null
-        | undefined
-      let rounded_effect_of_window_actor: TypeRoundedCornersEffect = null;
-      if (UI.shell_version() >= 43) {
-        // Name of rounded corners effect added to preview window
-        const name = 'Rounded Corners Effect (Overview)';
-
-        // Disabled rounded corners of window temporarily when enter overview
-        rounded_effect_of_window_actor = UI.get_rounded_corners_effect(
-          window_actor
-        ) as TypeRoundedCornersEffect;
-        rounded_effect_of_window_actor?.set_enabled(false);
-
-        // Add rounded corners effect to preview window actor
-        firstChild?.add_effect_with_name(name, new RoundedCornersEffect());
-
-        // Update uniform variables of rounded corners effect when size of
-        // preview windows in overview changed.
-        const c = connections.get();
-        c.connect(this, 'notify::width', () => {
-          const rounded_effect_of_preview_window = firstChild?.get_effect(
-            name
-          ) as TypeRoundedCornersEffect;
-          if (!rounded_effect_of_preview_window) {
-            return;
-          }
-
-          const buf_rect = window.get_buffer_rect();
-          const frame_rect = window.get_frame_rect();
-          const scaled = this.windowContainer.get_width() / frame_rect.width;
-          const x1 = (frame_rect.x - buf_rect.x) * scaled;
-          const y1 = (frame_rect.y - buf_rect.y) * scaled;
-          const x2 = x1 + frame_rect.width * scaled;
-          const y2 = y1 + frame_rect.height * scaled;
-
-          const scale_factor = UI.WindowScaleFactor(window) * scaled;
-          let pixel_step: [number, number] | undefined = undefined;
-          if (
-            UI.shell_version() >= 43.1 &&
-            window.get_client_type() == Meta.WindowClientType.WAYLAND
-          ) {
-            const surface = (
-              window.get_compositor_private() as Meta.WindowActor
-            ).firstChild;
-            pixel_step = [
-              1.0 / (scale_factor * surface.get_width()),
-              1.0 / (scale_factor * surface.get_height()),
-            ];
-          }
-          rounded_effect_of_preview_window.update_uniforms(
-            scale_factor,
-            settings().global_rounded_corner_settings,
-            { x1, y1, x2, y2 },
-            { width: 0, color: [0, 0, 0, 0] },
-            pixel_step
-          );
-        });
-      }
-
       // Disconnect all signals when Window preview in overview is destroy
       c.connect(this, 'destroy', () => {
         shadow_clone.destroy();
         firstChild?.clear_effects();
         firstChild = null;
-
-        // Enabled rounded corners of window actor when leaving overview,
-        // works for gnome 43.
-        if (overview._overview.controls._workspacesDisplay._leavingOverview) {
-          rounded_effect_of_window_actor?.set_enabled(true);
-        }
 
         c.disconnect_all(this);
       });
