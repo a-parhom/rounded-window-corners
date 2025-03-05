@@ -75,15 +75,27 @@ const compile_schema = (cb) => {
 const copy_resources = () => src('./resources/**/*').
   pipe(dest(BUILD_DIR))
 
+const clean = async () => {
+  require('fs').rmSync(extension_dir, { recursive: true, force: true })
+}
+const uuid = require('../resources/metadata.json').uuid
+const extension_dir = require('os').homedir + '/.local/share/gnome-shell/extensions/' + uuid
+
+const copy_non_js_files = (cb) => require('child_process')
+  .exec(`
+    for file in $(find ${SRC_DIR} -type f ! -name "*.ts" -printf '%P\n'); do \
+      path=${extension_dir}/$(dirname $file); \
+      mkdir -p $path; \
+      cp ${SRC_DIR}/$file $path; \
+    done;
+  `, cb)
+
+const copy_js_files = async () => {
+  src(`${BUILD_DIR}/**`).pipe(dest(extension_dir))
+}
 // Install extensions, copy all things in build directory into
 // ~/.local/share/gnome-shell/extensions
-const install_extension = () => {
-  const uuid = require('../resources/metadata.json').uuid
-  const extension_dir = require('os').homedir + '/.local/share/gnome-shell/extensions/' + uuid
-  require('fs').rmSync(extension_dir, { recursive: true, force: true })
-  return src(`${BUILD_DIR}/**`)
-    .pipe(dest(extension_dir))
-}
+const install_extension = series(clean, copy_js_files, copy_non_js_files)
 
 // -------------------------------------------------------- [Export gulp tasks]
 
